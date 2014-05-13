@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stories Grouped By Feature</title>
+
+    <script type="text/javascript" src="/apps/2.0rc2/sdk.js"></script>
+
+    <script type="text/javascript">
+        Rally.onReady(function () {
+                Ext.define('CustomApp', {
+    extend: 'Rally.app.App',
+    componentCls: 'app',
+    items:[
+        {
+            xtype: 'container',
+            itemId: 'widgets',
+        },
+        {
+            xtype: 'container',
+            itemId:'gridContainer',
+            columnWidth: 1
+        }
+        
+        
+    ],
+    launch: function() {
+        var that = this;
+        that._getTasks();
+    },
+    _getTasks: function() {
+        var that = this;
+         
+        
+        var today = new Date().toISOString();
+
+        
+        Ext.create('Rally.data.wsapi.Store', {
+                model: 'UserStory',
+                fetch: ['ObjectID', 'FormattedID', 'Name', 'ScheduleState', 'Feature'],
+                autoLoad: true,
+                filters: [
+                    {
+                        property: 'Iteration.StartDate',
+                        operator: '<=',
+                        value: today
+                    },
+                    {
+                        property: 'Iteration.EndDate',
+                        operator: '>=',
+                        value: today
+                    },
+                    {
+                        property: 'Feature',
+                        operator: '!=',
+                        value: null
+                    }
+                ],
+                listeners: {
+                    load: this._onDataLoaded,
+                    scope: this
+                },
+        });
+    },
+    _onDataLoaded: function(store, records){
+        var that = this;
+        var promises = [];
+         _.each(records, function(story) {
+            promises.push(that._getFeature(story, that));
+        });
+
+        Deft.Promise.all(promises).then({
+            success: function(results) {
+                that._stories = results;
+                that._makeGrid();
+            }
+        });
+    },
+    
+    _getFeature: function(story, scope) {
+        var deferred = Ext.create('Deft.Deferred');
+        var that = scope;
+            var featureOid = story.get('Feature').ObjectID;
+            Rally.data.ModelFactory.getModel({
+            type: 'PortfolioItem/Feature',
+            scope: this,
+            success: function(model, operation) {
+                fetch: ['State'],
+                model.load(featureOid, {
+                    scope: this,
+                    success: function(record, operation) {
+                        var featureState = record.get('State')._refObjectName;
+                        var storyRef = story.get('_ref');
+                        var storyOid  = story.get('ObjectID');
+                        var storyFid = story.get('FormattedID');
+                        var storyName  = story.get('Name');
+                        var storyState = story.get('ScheduleState');
+                        var feature = story.get('Feature');
+                        
+                        result = {
+                                    "_ref"          : storyRef,
+                                    "ObjectID"      : storyOid,
+                                    "FormattedID"   : storyFid,
+                                    "Name"          : storyName,
+                                    "ScheduleState" : storyState,
+                                    "Feature"       : feature,
+                                    "FeatureState"  : featureState,
+                                    "FeatureID"     : featureOid   
+                                };
+                        deferred.resolve(result);    
+                    }
+                });
+            }
+        });
+        return deferred; 
+    },
+    
+    _makeGrid: function() {
+        var that = this;
+
+        if (that._grid) {
+            that._grid.destroy();
+        }
+
+        var gridStore = Ext.create('Rally.data.custom.Store', {
+            data: that._stories,
+            groupField: 'FeatureID',
+            pageSize: 1000,
+        });
+
+        that._grid = Ext.create('Rally.ui.grid.Grid', {
+            itemId: 'storyGrid',
+            store: gridStore,
+            features: [{ftype:'grouping'}],
+            columnCfgs: [
+                {
+                    text: 'Formatted ID', dataIndex: 'FormattedID', xtype: 'templatecolumn',
+                    tpl: Ext.create('Rally.ui.renderer.template.FormattedIDTemplate')
+                },
+
+                {
+                    text: 'Name', dataIndex: 'Name', 
+                },
+                {
+                    text: 'ScheduleState', dataIndex: 'ScheduleState', 
+                },
+                {
+                    text: 'Feature', dataIndex: 'Feature',
+                    renderer: function(val, meta, record) {
+                        return '<a href="https://rally1.rallydev.com/#/detail/portfolioitem/feature/' + record.get('Feature').ObjectID + '" target="_blank">' + record.get('Feature').FormattedID + '</a>';
+                    }
+                },
+                {
+                    text: 'Feature State', dataIndex: 'FeatureState',
+                }
+            ]
+        });
+
+        that.add(that._grid);
+        that._grid.reconfigure(gridStore);
+    }
+});
+
+            Rally.launchApp('CustomApp', {
+                name:"Stories Grouped By Feature",
+	            parentRepos:""
+            });
+
+        });
+    </script>
+
+
+    <style type="text/css">
+        .app {
+     /* Add app styles here */
+}
+
+    </style>
+</head>
+<body></body>
+</html>
