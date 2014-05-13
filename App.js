@@ -2,16 +2,7 @@ Ext.define('CustomApp', {
     extend: 'Rally.app.App',
     componentCls: 'app',
     launch: function() {
-        var that = this;
-        that._getTasks();
-    },
-    _getTasks: function() {
-        var that = this;
-         
-        
         var today = new Date().toISOString();
-
-        
         Ext.create('Rally.data.wsapi.Store', {
                 model: 'UserStory',
                 fetch: ['ObjectID', 'FormattedID', 'Name', 'ScheduleState', 'Feature'],
@@ -36,8 +27,8 @@ Ext.define('CustomApp', {
                 listeners: {
                     load: this._onDataLoaded,
                     scope: this
-                },
-        });
+                }
+                });
     },
     _onDataLoaded: function(store, records){
         var that = this;
