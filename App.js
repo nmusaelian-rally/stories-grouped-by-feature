@@ -1,19 +1,6 @@
 Ext.define('CustomApp', {
     extend: 'Rally.app.App',
     componentCls: 'app',
-    items:[
-        {
-            xtype: 'container',
-            itemId: 'widgets',
-        },
-        {
-            xtype: 'container',
-            itemId:'gridContainer',
-            columnWidth: 1
-        }
-        
-        
-    ],
     launch: function() {
         var that = this;
         that._getTasks();
