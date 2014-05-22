@@ -5,7 +5,7 @@ Ext.define('CustomApp', {
         var today = new Date().toISOString();
         Ext.create('Rally.data.wsapi.Store', {
                 model: 'UserStory',
-                fetch: ['ObjectID', 'FormattedID', 'Name', 'ScheduleState', 'Feature'],
+                fetch: ['ObjectID', 'FormattedID', 'Name', 'ScheduleState', 'Feature', 'Blocked', 'BlockedReason'],
                 autoLoad: true,
                 filters: [
                     {
@@ -53,14 +53,17 @@ Ext.define('CustomApp', {
             type: 'PortfolioItem/Feature',
             scope: this,
             success: function(model, operation) {
-                fetch: ['State'],
+                fetch: ['FormattedID','State'],
                 model.load(featureOid, {
                     scope: this,
                     success: function(record, operation) {
                         var featureState = record.get('State')._refObjectName;
+                        var featureFid = record.get('FormattedID');
                         var storyRef = story.get('_ref');
                         var storyOid  = story.get('ObjectID');
                         var storyFid = story.get('FormattedID');
+                        var storyBlocked = story.get('Blocked');
+                        var blockedReason = story.get('BlockedReason');
                         var storyName  = story.get('Name');
                         var storyState = story.get('ScheduleState');
                         var feature = story.get('Feature');
@@ -71,9 +74,11 @@ Ext.define('CustomApp', {
                                     "FormattedID"   : storyFid,
                                     "Name"          : storyName,
                                     "ScheduleState" : storyState,
+                                    "Blocked"       : storyBlocked,
+                                    "BlockedReason" : blockedReason,
                                     "Feature"       : feature,
                                     "FeatureState"  : featureState,
-                                    "FeatureID"     : featureOid   
+                                    "FeatureID"     : featureFid  
                                 };
                         deferred.resolve(result);    
                     }
@@ -85,7 +90,7 @@ Ext.define('CustomApp', {
     
     _makeGrid: function() {
         var that = this;
-
+        console.log(that._stories);
         if (that._grid) {
             that._grid.destroy();
         }
@@ -100,6 +105,7 @@ Ext.define('CustomApp', {
             itemId: 'storyGrid',
             store: gridStore,
             features: [{ftype:'grouping'}],
+            enableBlockedReasonPopover: false,
             columnCfgs: [
                 {
                     text: 'Formatted ID', dataIndex: 'FormattedID', xtype: 'templatecolumn',
@@ -110,8 +116,24 @@ Ext.define('CustomApp', {
                     text: 'Name', dataIndex: 'Name', 
                 },
                 {
-                    text: 'ScheduleState', dataIndex: 'ScheduleState', 
+                    text: 'ScheduleState', dataIndex: 'ScheduleState', xtype: 'templatecolumn',
+                        tpl: Ext.create('Rally.ui.renderer.template.ScheduleStateTemplate',
+                            {
+                                states: ['Defined', 'In-Progress', 'Completed', 'Accepted'],
+                                field: {
+                                    name: 'ScheduleState' 
+                                }
+                        })
                 },
+                {
+                    text: 'Blocked', dataIndex: 'Blocked', xtype: 'templatecolumn',
+                    tpl: Ext.create('Rally.ui.renderer.template.BlockedTemplate')
+                },
+                
+                {
+                    text: 'BlockedReason', dataIndex: 'BlockedReason'
+                },
+                
                 {
                     text: 'Feature', dataIndex: 'Feature',
                     renderer: function(val, meta, record) {

@@ -5,6 +5,8 @@ Stories of Current Iteration Grouped By Feature
 
 ![](pic.png)
 
+![](pic2.png)
+
 This app is available on AS IS basis. It is not supported by Rally support.
 ## License
 
